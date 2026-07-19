@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍸 Алхимия коктейлей</title>
+    <title>🍸 Алхимия</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
@@ -15,252 +15,274 @@
             font-family: system-ui, -apple-system, sans-serif;
             background: #0b0b12;
             color: #e8e6e3;
-            padding: 16px 14px;
             min-height: 100vh;
-            background-image: radial-gradient(circle at 20% 30%, #1a1a2e 0%, #0b0b12 70%);
-        }
-        .header {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            margin-bottom: 16px;
+            background-image: radial-gradient(circle at 20% 30%, #1a1a2e 0%, #0b0b12 70%);
+            padding: 16px;
+            user-select: none;
         }
+        .container {
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+        }
+
+        /* === ЗАГОЛОВОК === */
         .header h1 {
-            font-size: 22px;
-            font-weight: 600;
+            font-size: 24px;
             background: linear-gradient(135deg, #f9d976, #f39c12);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: 0.5px;
+            margin-bottom: 6px;
         }
-        .badge {
-            background: rgba(255, 215, 0, 0.12);
-            border: 1px solid rgba(255, 215, 0, 0.25);
-            border-radius: 40px;
-            padding: 4px 14px;
-            font-size: 11px;
-            color: #f1c40f;
+        .header .sub {
+            font-size: 12px;
+            color: #666;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
-        .disclaimer {
-            background: rgba(30, 10, 10, 0.7);
-            border-left: 4px solid #cc2222;
-            padding: 14px 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            font-size: 11px;
-            line-height: 1.6;
-            color: #cc9999;
-            backdrop-filter: blur(6px);
-            box-shadow: 0 0 30px rgba(200, 30, 30, 0.05);
-        }
-        .disclaimer strong {
-            color: #ff6666;
-        }
-        .disclaimer .final {
-            color: #ff3333;
-            font-weight: 600;
-        }
-        .glass-wrapper {
+
+        /* === КОЛБА === */
+        .flask-wrapper {
+            position: relative;
             display: flex;
             justify-content: center;
-            margin-bottom: 18px;
+            align-items: center;
+            margin: 20px 0 30px 0;
+            min-height: 260px;
         }
-        .glass {
-            width: 110px;
-            height: 160px;
-            border: 2.5px solid rgba(255, 215, 0, 0.35);
+        .flask {
+            width: 140px;
+            height: 200px;
+            border: 3px solid rgba(255, 215, 0, 0.3);
             border-top: none;
-            border-radius: 0 0 60px 60px;
+            border-radius: 0 0 70px 70px;
             position: relative;
             background: rgba(255, 255, 255, 0.02);
-            box-shadow: 0 0 40px rgba(255, 215, 0, 0.06);
             overflow: hidden;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.05);
+            transition: border-color 0.3s;
+            flex-shrink: 0;
         }
-        .glass-liquid {
+        .flask-liquid {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
-            transition: height 0.5s cubic-bezier(0.22, 1, 0.36, 1), background 0.6s ease;
+            transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1), background 0.8s ease;
             height: 0%;
-            border-radius: 0 0 58px 58px;
+            border-radius: 0 0 68px 68px;
         }
-        .glass-liquid::after {
+        .flask-liquid::after {
             content: '';
             position: absolute;
-            top: -6px;
+            top: -8px;
             left: 0;
             width: 100%;
-            height: 12px;
+            height: 16px;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 100%);
             border-radius: 50%;
-            filter: blur(2px);
+            filter: blur(3px);
         }
-        .glass-label {
+        .flask-label {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.2);
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.15);
             pointer-events: none;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+            transition: opacity 0.4s;
         }
-        .glass-glow {
+        .flask-glow {
             position: absolute;
             bottom: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 80%;
-            height: 40%;
-            background: radial-gradient(ellipse, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+            width: 70%;
+            height: 50%;
+            background: radial-gradient(ellipse, rgba(255, 215, 0, 0.06) 0%, transparent 70%);
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.5s;
+            transition: opacity 0.6s;
         }
-        .glass-glow.active {
+        .flask-glow.active {
             opacity: 1;
         }
-        .section-title {
+
+        /* === ИНГРЕДИЕНТЫ (кнопки вокруг) === */
+        .ingredient-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 40px;
+            padding: 8px 16px;
             font-size: 13px;
-            font-weight: 500;
-            color: #a09888;
-            text-transform: uppercase;
-            margin: 14px 0 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            padding-bottom: 6px;
-        }
-        .ingredient-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        .ingredient-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 14px;
-            padding: 8px 12px 8px 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            color: #d0ccc8;
+            cursor: pointer;
+            transition: all 0.25s ease;
             backdrop-filter: blur(4px);
-            transition: border-color 0.25s;
+            white-space: nowrap;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            min-width: 60px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
         }
-        .ingredient-card:hover {
-            border-color: rgba(255, 215, 0, 0.15);
+        .ingredient-btn:active {
+            transform: scale(0.94);
         }
-        .ingredient-card.illegal {
-            border-color: rgba(255, 60, 60, 0.15);
-            background: rgba(255, 60, 60, 0.03);
-        }
-        .ingredient-card.illegal .ingredient-name {
+        .ingredient-btn.illegal {
+            border-color: rgba(255, 60, 60, 0.2);
             color: #ff8888;
         }
-        .ingredient-card .emoji {
-            font-size: 16px;
-            width: 24px;
-            text-align: center;
+        .ingredient-btn.illegal:active {
+            background: rgba(255, 60, 60, 0.1);
         }
-        .ingredient-card .ingredient-name {
-            flex: 1;
-            font-size: 12px;
-            color: #d0ccc8;
+        .ingredient-btn:active:not(.illegal) {
+            background: rgba(255, 215, 0, 0.08);
         }
-        .ingredient-card input[type="range"] {
-            flex: 1.2;
-            min-width: 40px;
-            height: 3px;
-            -webkit-appearance: none;
-            appearance: none;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 4px;
-            outline: none;
+
+        /* Расположение кнопок вокруг колбы */
+        .btn-left {
+            position: absolute;
+            left: -10px;
+            transform: translateX(-100%);
         }
-        .ingredient-card input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #f1c40f, #d4a017);
-            cursor: pointer;
-            box-shadow: 0 0 12px rgba(255, 215, 0, 0.25);
+        .btn-right {
+            position: absolute;
+            right: -10px;
+            transform: translateX(100%);
         }
-        .ingredient-card input[type="range"]::-moz-range-thumb {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #f1c40f, #d4a017);
-            cursor: pointer;
-            border: none;
+        .btn-top {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
         }
-        .ingredient-card .val {
-            min-width: 28px;
-            text-align: right;
-            font-size: 12px;
-            font-weight: 500;
-            color: #f1c40f;
+        .btn-bottom {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
         }
-        .btn-row {
-            display: flex;
-            gap: 12px;
-            margin: 18px 0 14px 0;
+
+        .btn-left-1 {
+            top: 10%;
         }
-        .btn {
-            flex: 1;
-            padding: 14px 0;
+        .btn-left-2 {
+            top: 30%;
+        }
+        .btn-left-3 {
+            top: 50%;
+        }
+        .btn-left-4 {
+            top: 70%;
+        }
+        .btn-right-1 {
+            top: 20%;
+        }
+        .btn-right-2 {
+            top: 40%;
+        }
+        .btn-right-3 {
+            top: 60%;
+        }
+        .btn-right-4 {
+            top: 80%;
+        }
+
+        /* === КНОПКИ УПРАВЛЕНИЯ === */
+        .action-btn {
+            padding: 14px 32px;
             border-radius: 40px;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
             border: none;
             cursor: pointer;
             transition: all 0.25s ease;
+            letter-spacing: 0.5px;
+            min-width: 120px;
         }
+        .action-btn:active {
+            transform: scale(0.94);
+        }
+
         .btn-mix {
             background: linear-gradient(135deg, #f9d976, #e6b422);
             color: #0b0b12;
-            box-shadow: 0 4px 24px rgba(255, 215, 0, 0.15);
+            box-shadow: 0 4px 24px rgba(255, 215, 0, 0.2);
         }
-        .btn-mix:hover {
-            transform: scale(1.01);
-            box-shadow: 0 6px 32px rgba(255, 215, 0, 0.25);
+        .btn-mix:disabled {
+            opacity: 0.3;
+            pointer-events: none;
         }
-        .btn-taste {
-            background: rgba(255, 255, 255, 0.04);
-            color: #f1c40f;
-            border: 1px solid rgba(255, 215, 0, 0.2);
-            backdrop-filter: blur(4px);
+        .btn-drink {
+            background: linear-gradient(135deg, #ff6b6b, #e63946);
+            color: #fff;
+            box-shadow: 0 4px 24px rgba(255, 60, 60, 0.2);
         }
-        .btn-taste:hover {
-            background: rgba(255, 215, 0, 0.08);
-            border-color: rgba(255, 215, 0, 0.4);
+        .btn-back {
+            background: rgba(255, 255, 255, 0.06);
+            color: #aaa;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .btn-clear {
-            background: rgba(255, 255, 255, 0.03);
-            color: #888;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 6px 18px;
-            border-radius: 30px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: 0.2s;
-            float: right;
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 10px;
+            flex-wrap: wrap;
         }
-        .btn-clear:hover {
-            background: rgba(255, 60, 60, 0.08);
-            border-color: rgba(255, 60, 60, 0.2);
-            color: #cc8888;
+
+        /* === АНИМАЦИЯ ВСТРЯХИВАНИЯ === */
+        @keyframes shake {
+            0% {
+                transform: rotate(0deg);
+            }
+            15% {
+                transform: rotate(-12deg) scale(1.02);
+            }
+            30% {
+                transform: rotate(12deg) scale(1.02);
+            }
+            45% {
+                transform: rotate(-10deg);
+            }
+            60% {
+                transform: rotate(10deg);
+            }
+            80% {
+                transform: rotate(-4deg);
+            }
+            100% {
+                transform: rotate(0deg);
+            }
         }
+        .flask.shaking {
+            animation: shake 0.4s ease-in-out 8;
+            transform-origin: center bottom;
+            border-color: rgba(255, 215, 0, 0.6);
+        }
+        .flask.shaking .flask-liquid {
+            transition: none;
+        }
+
+        /* === РЕЗУЛЬТАТ === */
         #result {
+            margin-top: 16px;
+            padding: 14px 18px;
             background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 16px;
-            padding: 16px 18px;
-            min-height: 80px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
             font-size: 14px;
             line-height: 1.6;
             white-space: pre-line;
-            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.2);
+            min-height: 50px;
         }
         #result .good {
             color: #7ddf9a;
@@ -271,17 +293,49 @@
         #result .danger {
             color: #ff6b6b;
         }
+
+        .hidden {
+            display: none !important;
+        }
+
         .note {
             font-size: 10px;
             color: #4a4a5a;
-            text-align: center;
-            margin-top: 12px;
+            margin-top: 10px;
         }
-        @media (max-width: 420px) {
-            .ingredient-grid {
-                grid-template-columns: 1fr;
+
+        /* === АДАПТИВ === */
+        @media (max-width: 460px) {
+            .flask {
+                width: 110px;
+                height: 160px;
             }
-            .glass {
+            .ingredient-btn {
+                font-size: 11px;
+                padding: 6px 12px;
+                min-width: 44px;
+            }
+            .btn-left {
+                left: -2px;
+                transform: translateX(-90%);
+            }
+            .btn-right {
+                right: -2px;
+                transform: translateX(90%);
+            }
+            .action-btn {
+                padding: 12px 20px;
+                font-size: 15px;
+                min-width: 90px;
+            }
+        }
+        @media (max-width: 380px) {
+            .ingredient-btn {
+                font-size: 10px;
+                padding: 4px 10px;
+                min-width: 36px;
+            }
+            .flask {
                 width: 90px;
                 height: 130px;
             }
@@ -289,195 +343,144 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>✦ Алхимия</h1>
-        <span class="badge">v2.0 · лаб.</span>
-    </div>
+    <div class="container" id="app">
 
-    <div class="disclaimer">
-        <strong>⚠️ ДИСКЛЕЙМЕР:</strong> Всё, что ты здесь видишь, — <strong>художественная симуляция</strong>, не имеющая отношения к реальности. Автор не несёт ответственности за попытки повтора.
-        <br><br>
-        <strong>НО ЕСЛИ ТЫ ВСЁ-ТАКИ РЕШИШЬ ПОВТОРИТЬ В РЕАЛЕ — ЗНАЙ:</strong>
-        <br>• Алкоголь и психотропы ведут к <strong>алкоголизму и зависимости</strong>, от которых почти никто не возвращается.
-        <br>• Ты <strong>потеряешь семью, друзей, работу</strong> — люди, которым ты небезразличен, станут равнодушны.
-        <br>• Твоя личность <strong>деградирует</strong> — ты превратишься в животное, думающее только о дозе.
-        <br>• Вместо целей — <strong>бесцельное существование</strong>, пустота, которая съедает тебя изнутри.
-        <br>• И финал один: <strong class="final">долгая, мучительная, беспомощная смерть</strong> — в одиночестве, в грязи, когда организм просто откажется работать.
-        <br><br>
-        <strong>ЭТО НЕ ШУТКИ. ЭТО РЕАЛЬНОСТЬ.</strong>
-        <br>
-        Если у тебя есть проблемы — <strong>обратись за помощью</strong>. Пока не поздно.
-    </div>
-
-    <div class="glass-wrapper">
-        <div class="glass" id="glass">
-            <div class="glass-liquid" id="liquid" style="height:0%; background:#f1c40f;"></div>
-            <div class="glass-glow" id="glassGlow"></div>
-            <div class="glass-label" id="glassLabel">наливай</div>
+        <div class="header">
+            <h1>✦ Алхимия</h1>
+            <div class="sub">лаборатория коктейлей</div>
         </div>
+
+        <!-- КОЛБА С КНОПКАМИ -->
+        <div class="flask-wrapper" id="flaskWrapper">
+
+            <!-- Кнопки слева -->
+            <button class="ingredient-btn btn-left btn-left-1" data-ingredient="Текила">🌵 Текила</button>
+            <button class="ingredient-btn btn-left btn-left-2" data-ingredient="Ром">🏝️ Ром</button>
+            <button class="ingredient-btn btn-left btn-left-3" data-ingredient="Водка">❄️ Водка</button>
+            <button class="ingredient-btn btn-left btn-left-4" data-ingredient="Джин">🌿 Джин</button>
+
+            <!-- Кнопки справа -->
+            <button class="ingredient-btn btn-right btn-right-1" data-ingredient="Абсент">🧪 Абсент</button>
+            <button class="ingredient-btn btn-right btn-right-2" data-ingredient="Ликер Блю Кюрасао">💎 Блю</button>
+            <button class="ingredient-btn btn-right btn-right-3" data-ingredient="Кока-Кола">🥤 Кола</button>
+            <button class="ingredient-btn btn-right btn-right-4" data-ingredient="Сок Лайма">🍋 Лайм</button>
+
+            <!-- Кнопки сверху и снизу -->
+            <button class="ingredient-btn btn-top" data-ingredient="Энергетик">⚡ Энергетик</button>
+            <button class="ingredient-btn btn-bottom" data-ingredient="Сироп Гренадин">🍒 Гренадин</button>
+
+            <!-- Нелегальные (внизу слева/справа) -->
+            <button class="ingredient-btn btn-left btn-left-2 illegal" data-ingredient="Кетамин" style="top:90%;">💉 Кетамин</button>
+            <button class="ingredient-btn btn-right btn-right-2 illegal" data-ingredient="МДМА" style="top:90%;">💎 МДМА</button>
+
+            <!-- Сама колба -->
+            <div class="flask" id="flask">
+                <div class="flask-liquid" id="liquid" style="height:0%; background:#f1c40f;"></div>
+                <div class="flask-glow" id="flaskGlow"></div>
+                <div class="flask-label" id="flaskLabel">наливай</div>
+            </div>
+        </div>
+
+        <!-- ИНФО О НАЛИТОМ -->
+        <div id="pourInfo" style="font-size:13px; color:#888; margin-top:-10px; min-height:24px;"></div>
+
+        <!-- КНОПКИ ДЕЙСТВИЙ -->
+        <div id="actionGroup">
+            <button class="action-btn btn-mix" id="mixBtn">🌀 Смешать</button>
+        </div>
+
+        <!-- КНОПКИ ПОСЛЕ СМЕШИВАНИЯ (скрыты по умолчанию) -->
+        <div id="postGroup" class="hidden">
+            <div class="btn-group">
+                <button class="action-btn btn-drink" id="drinkBtn">🍸 Выпить</button>
+                <button class="action-btn btn-back" id="backBtn">↺ Назад</button>
+            </div>
+        </div>
+
+        <!-- РЕЗУЛЬТАТ -->
+        <div id="result">выбери ингредиенты</div>
+        <div class="note">🔞 нелегальные — только для исследования</div>
     </div>
-
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="font-size:12px; color:#666;">ингредиенты</span>
-        <button class="btn-clear" id="clearBtn">✖ очистить</button>
-    </div>
-
-    <div class="section-title">🍹 база</div>
-    <div class="ingredient-grid" id="baseGrid"></div>
-
-    <div class="section-title">🧪 дополнения</div>
-    <div class="ingredient-grid" id="extraGrid"></div>
-
-    <div class="section-title">🔞 экспериментальное</div>
-    <div class="ingredient-grid" id="illegalGrid"></div>
-
-    <div class="btn-row">
-        <button class="btn btn-mix" id="mixBtn">🌀 смешать</button>
-        <button class="btn btn-taste" id="tasteBtn">👅 попробовать</button>
-    </div>
-
-    <div id="result">выбери ингредиенты и нажми «смешать»</div>
-    <div class="note">🔞 нелегальные — только для исследования · симуляция</div>
 
     <script>
         // === ДАННЫЕ ===
-        const EMOJIS = {
-            "Текила": "🌵",
-            "Ром": "🏝️",
-            "Водка": "❄️",
-            "Абсент": "🧪",
-            "Джин": "🌿",
-            "Ликер Блю Кюрасао": "💎",
-            "Сливочный ликер (Бейлис)": "🥛",
-            "Энергетик": "⚡",
-            "Валерьянка": "🌱",
-            "Шипучий Аспирин": "💊",
-            "Корвалол": "💧",
-            "Нашатырь": "🧴",
-            "Острый соус Табаско": "🌶️",
-            "Сироп Гренадин": "🍒",
-            "Тоник": "🥤",
-            "Сок Лайма": "🍋",
-            "Кока-Кола": "🥤",
-            "Кокосовое молоко": "🥥",
-            "Сухой лед": "❄️",
-            "Пищевые блестки": "✨",
-            "Кетамин": "💉",
-            "ЛСД": "🌀",
-            "Псилоцибиновые грибы": "🍄",
-            "МДМА": "💎",
-            "Кокаин": "❄️"
-        };
-
         const INGREDIENTS = {
-            "Текила": { group: "base", color: "#D4A017", strength: 38 },
-            "Ром": { group: "base", color: "#B8860B", strength: 40 },
-            "Водка": { group: "base", color: "#F0F0F0", strength: 40 },
-            "Абсент": { group: "base", color: "#50C878", strength: 70 },
-            "Джин": { group: "base", color: "#E0FFFF", strength: 37 },
-            "Ликер Блю Кюрасао": { group: "extra", color: "#1E90FF", strength: 20 },
-            "Сливочный ликер (Бейлис)": { group: "extra", color: "#D2B48C", strength: 17 },
-            "Энергетик": { group: "extra", color: "#FFD700", strength: 0 },
-            "Валерьянка": { group: "extra", color: "#8B5A2B", strength: 0 },
-            "Шипучий Аспирин": { group: "extra", color: "#FFFFFF", strength: 0 },
-            "Корвалол": { group: "extra", color: "#C0C0C0", strength: 0 },
-            "Нашатырь": { group: "extra", color: "#F5F5F5", strength: 0 },
-            "Острый соус Табаско": { group: "extra", color: "#DC143C", strength: 0 },
-            "Сироп Гренадин": { group: "extra", color: "#FF1493", strength: 0 },
-            "Тоник": { group: "extra", color: "#F0FFF0", strength: 0 },
-            "Сок Лайма": { group: "extra", color: "#32CD32", strength: 0 },
-            "Кока-Кола": { group: "extra", color: "#3B170B", strength: 0 },
-            "Кокосовое молоко": { group: "extra", color: "#FFF8DC", strength: 0 },
-            "Сухой лед": { group: "extra", color: "#B0E0E6", strength: 0 },
-            "Пищевые блестки": { group: "extra", color: "#FFD700", strength: 0 },
-            "Кетамин": { group: "illegal", color: "#E6E6FA", strength: 0 },
-            "ЛСД": { group: "illegal", color: "#DA70D6", strength: 0 },
-            "Псилоцибиновые грибы": { group: "illegal", color: "#8B4513", strength: 0 },
-            "МДМА": { group: "illegal", color: "#F5F5F5", strength: 0 },
-            "Кокаин": { group: "illegal", color: "#F0F0F0", strength: 0 }
+            "Текила": { color: "#D4A017", strength: 38 },
+            "Ром": { color: "#B8860B", strength: 40 },
+            "Водка": { color: "#F0F0F0", strength: 40 },
+            "Джин": { color: "#E0FFFF", strength: 37 },
+            "Абсент": { color: "#50C878", strength: 70 },
+            "Ликер Блю Кюрасао": { color: "#1E90FF", strength: 20 },
+            "Энергетик": { color: "#FFD700", strength: 0 },
+            "Сироп Гренадин": { color: "#FF1493", strength: 0 },
+            "Кока-Кола": { color: "#3B170B", strength: 0 },
+            "Сок Лайма": { color: "#32CD32", strength: 0 },
+            "Кетамин": { color: "#E6E6FA", strength: 0, illegal: true },
+            "МДМА": { color: "#F5F5F5", strength: 0, illegal: true },
         };
 
         const REACTIONS = {
-            "Божественно": { emoji: "✨", class: "good", desc: "Идеальный баланс! Эйфория и тепло." },
-            "Приятно": { emoji: "😊", class: "good", desc: "Лёгкое удовольствие. Отличный вечер." },
-            "Головокружение": { emoji: "🌀", class: "warning", desc: "Слегка шатает. Крепость даёт о себе знать." },
-            "Тошнота": { emoji: "🤢", class: "warning", desc: "Желудок протестует. Кислота + газ." },
-            "Провал в памяти": { emoji: "💀", class: "danger", desc: "Высокий градус + сахар = отключка." },
-            "Остановка дыхания": { emoji: "⚠️", class: "danger", desc: "Алкоголь + седативные = угнетение ЦНС." },
-            "Сердечный приступ": { emoji: "💔", class: "danger", desc: "Кокаин + алкоголь = кокаэтилен, кардиотоксин." },
-            "Серотониновый шторм": { emoji: "🔥", class: "danger", desc: "МДМА + алкоголь + энергетик = гипертермия." },
-            "Галлюцинации": { emoji: "👽", class: "warning", desc: "Психоделики искажают реальность." },
-            "Кетаминовая яма": { emoji: "🕳️", class: "danger", desc: "Кетамин + абсент = диссоциация." },
-            "Желудочный ожог": { emoji: "🔥", class: "danger", desc: "Нашатырь или Табаско — химический ожог." },
-            "Ледяной шок": { emoji: "❄️", class: "warning", desc: "Сухой лёд + жидкость = CO₂, вздутие." },
-            "Летальный исход": { emoji: "⚰️", class: "danger", desc: "Смертельная комбинация. Не повторять." }
+            "Божественно": { emoji: "✨", class: "good", desc: "Идеальный баланс! Эйфория." },
+            "Приятно": { emoji: "😊", class: "good", desc: "Лёгкое удовольствие." },
+            "Головокружение": { emoji: "🌀", class: "warning", desc: "Слегка шатает." },
+            "Тошнота": { emoji: "🤢", class: "warning", desc: "Желудок протестует." },
+            "Провал в памяти": { emoji: "💀", class: "danger", desc: "Отключка." },
+            "Остановка дыхания": { emoji: "⚠️", class: "danger", desc: "Алкоголь + седативные." },
+            "Сердечный приступ": { emoji: "💔", class: "danger", desc: "Кокаин + алкоголь." },
+            "Серотониновый шторм": { emoji: "🔥", class: "danger", desc: "МДМА + энергетик." },
+            "Кетаминовая яма": { emoji: "🕳️", class: "danger", desc: "Кетамин + абсент." },
+            "Летальный исход": { emoji: "⚰️", class: "danger", desc: "Смертельная комбинация." }
         };
 
         // === СОСТОЯНИЕ ===
-        let values = {};
-        Object.keys(INGREDIENTS).forEach(k => values[k] = 0);
+        let state = {
+            mix: {}, // { "Текила": 250, "Ром": 250 }
+            isShaking: false,
+            isMixed: false,
+        };
 
-        // === РЕНДЕР ===
-        function renderGrid(group, containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            Object.keys(INGREDIENTS).forEach(name => {
-                if (INGREDIENTS[name].group !== group) return;
-                const div = document.createElement('div');
-                div.className = `ingredient-card${group === 'illegal' ? ' illegal' : ''}`;
-                const v = values[name] || 0;
-                const emoji = EMOJIS[name] || '🧪';
-                div.innerHTML = `
-                    <span class="emoji">${emoji}</span>
-                    <span class="ingredient-name">${name}</span>
-                    <input type="range" min="0" max="100" value="${v}" data-name="${name}">
-                    <span class="val" id="val_${name}">${v}</span>
-                `;
-                const slider = div.querySelector('input');
-                slider.oninput = () => {
-                    const val = parseInt(slider.value);
-                    values[name] = val;
-                    document.getElementById(`val_${name}`).textContent = val;
-                    updateGlass();
-                };
-                container.appendChild(div);
-            });
-        }
+        // === DOM ===
+        const flask = document.getElementById('flask');
+        const liquid = document.getElementById('liquid');
+        const label = document.getElementById('flaskLabel');
+        const glow = document.getElementById('flaskGlow');
+        const pourInfo = document.getElementById('pourInfo');
+        const resultDiv = document.getElementById('result');
+        const mixBtn = document.getElementById('mixBtn');
+        const actionGroup = document.getElementById('actionGroup');
+        const postGroup = document.getElementById('postGroup');
+        const drinkBtn = document.getElementById('drinkBtn');
+        const backBtn = document.getElementById('backBtn');
 
-        renderGrid('base', 'baseGrid');
-        renderGrid('extra', 'extraGrid');
-        renderGrid('illegal', 'illegalGrid');
+        const ingredientBtns = document.querySelectorAll('.ingredient-btn');
 
-        // === БОКАЛ ===
+        // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
         function hexToRgb(hex) {
             const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return res ? { r: parseInt(res[1], 16), g: parseInt(res[2], 16), b: parseInt(res[3], 16) } : null;
         }
 
-        function updateGlass() {
-            const total = Object.values(values).reduce((a, b) => a + b, 0);
-            const liquid = document.getElementById('liquid');
-            const label = document.getElementById('glassLabel');
-            const glow = document.getElementById('glassGlow');
-
+        function updateFlask() {
+            const total = Object.values(state.mix).reduce((a, b) => a + b, 0);
             if (total === 0) {
                 liquid.style.height = '0%';
                 label.textContent = 'наливай';
                 glow.classList.remove('active');
+                pourInfo.textContent = '';
                 return;
             }
 
-            const level = Math.min(88, (total / 100) * 88);
+            const level = Math.min(88, (total / 500) * 88);
             liquid.style.height = level + '%';
             glow.classList.add('active');
 
+            // Смешиваем цвет
             let r = 0,
                 g = 0,
                 b = 0,
                 w = 0;
-            Object.keys(values).forEach(name => {
-                const v = values[name];
-                if (v === 0) return;
+            Object.keys(state.mix).forEach(name => {
+                const v = state.mix[name];
                 const col = INGREDIENTS[name].color;
                 const rgb = hexToRgb(col);
                 if (!rgb) return;
@@ -492,103 +495,146 @@
                 b = Math.min(255, Math.round(b / w));
                 liquid.style.background = `rgb(${r},${g},${b})`;
             }
+
+            const names = Object.keys(state.mix);
+            pourInfo.textContent = names.join(' + ') + ` (${total} мл)`;
             label.textContent = `${total} мл`;
         }
 
-        // === СМЕШАТЬ ===
-        function getMix() {
-            const mix = {};
-            Object.keys(values).forEach(k => { if (values[k] > 0) mix[k] = values[k]; });
-            return mix;
-        }
-
-        function getTotalStrength(mix) {
-            const total = Object.values(mix).reduce((a, b) => a + b, 0);
-            if (total === 0) return 0;
-            let sum = 0;
-            Object.keys(mix).forEach(k => { sum += INGREDIENTS[k].strength * mix[k]; });
-            return Math.round(sum / total);
-        }
-
-        document.getElementById('mixBtn').onclick = () => {
-            const mix = getMix();
-            const total = Object.values(mix).reduce((a, b) => a + b, 0);
-            if (total === 0) {
-                document.getElementById('result').innerHTML = '❌ добавь ингредиенты';
-                return;
-            }
-            const strength = getTotalStrength(mix);
-            const illegal = Object.keys(mix).filter(k => INGREDIENTS[k].group === 'illegal');
-            let msg = `🍸 *коктейль готов*\nкрепость: ${strength}°\n\n`;
-            Object.keys(mix).forEach(k => {
-                msg += `  • ${k} ${mix[k]} мл\n`;
+        function getTotalStrength() {
+            let total = 0,
+                sum = 0;
+            Object.keys(state.mix).forEach(k => {
+                const v = state.mix[k];
+                total += v;
+                sum += INGREDIENTS[k].strength * v;
             });
-            if (illegal.length) msg += `\n🔞 содержит: ${illegal.join(', ')}`;
-            document.getElementById('result').innerHTML = msg;
-        };
+            return total === 0 ? 0 : Math.round(sum / total);
+        }
 
-        // === ПОПРОБОВАТЬ ===
-        document.getElementById('tasteBtn').onclick = () => {
-            const mix = getMix();
-            const total = Object.values(mix).reduce((a, b) => a + b, 0);
-            if (total === 0) {
-                document.getElementById('result').innerHTML = '❌ сначала смешай';
+        function getIllegal() {
+            return Object.keys(state.mix).filter(k => INGREDIENTS[k].illegal);
+        }
+
+        function resetState() {
+            state.mix = {};
+            state.isShaking = false;
+            state.isMixed = false;
+            flask.classList.remove('shaking');
+            actionGroup.classList.remove('hidden');
+            postGroup.classList.add('hidden');
+            mixBtn.disabled = false;
+            ingredientBtns.forEach(b => b.disabled = false);
+            updateFlask();
+            resultDiv.innerHTML = 'выбери ингредиенты';
+        }
+
+        // === НАЛИТЬ ИНГРЕДИЕНТ ===
+        function pourIngredient(name) {
+            if (state.isShaking || state.isMixed) return;
+            if (Object.keys(state.mix).length >= 6) {
+                resultDiv.innerHTML = '⚠️ Слишком много ингредиентов!';
                 return;
             }
-            const strength = getTotalStrength(mix);
-            const illegal = Object.keys(mix).filter(k => INGREDIENTS[k].group === 'illegal');
-            const names = Object.keys(mix);
+            // Каждый раз наливаем 250 мл (если уже есть — добавляем)
+            if (state.mix[name]) {
+                state.mix[name] += 250;
+            } else {
+                state.mix[name] = 250;
+            }
+            // Если больше 500 мл — обрезаем до 500
+            if (state.mix[name] > 500) state.mix[name] = 500;
+            updateFlask();
+            resultDiv.innerHTML = `➕ ${name} +250 мл`;
+        }
+
+        // === СМЕШАТЬ (анимация 5 сек) ===
+        function startMix() {
+            const total = Object.values(state.mix).reduce((a, b) => a + b, 0);
+            if (total === 0) {
+                resultDiv.innerHTML = '❌ сначала налей что-нибудь';
+                return;
+            }
+            if (Object.keys(state.mix).length < 2) {
+                resultDiv.innerHTML = '❌ нужно минимум 2 ингредиента';
+                return;
+            }
+
+            state.isShaking = true;
+            state.isMixed = false;
+            mixBtn.disabled = true;
+            ingredientBtns.forEach(b => b.disabled = true);
+            flask.classList.add('shaking');
+            resultDiv.innerHTML = '🌀 Смешивание... 5 секунд';
+
+            // Показываем анимацию 5 секунд
+            setTimeout(() => {
+                flask.classList.remove('shaking');
+                state.isShaking = false;
+                state.isMixed = true;
+                actionGroup.classList.add('hidden');
+                postGroup.classList.remove('hidden');
+                resultDiv.innerHTML = '✅ Коктейль готов!';
+                // Добавляем случайное свечение
+                glow.classList.add('active');
+            }, 5000);
+        }
+
+        // === ВЫПИТЬ (реакция) ===
+        function drink() {
+            const strength = getTotalStrength();
+            const illegal = getIllegal();
+            const names = Object.keys(state.mix);
 
             let key = "Приятно";
-            if (names.includes("Корвалол") && names.includes("Валерьянка") && names.some(k => INGREDIENTS[k].strength > 0))
-                key = "Остановка дыхания";
-            else if (names.includes("Кокаин") && names.some(k => INGREDIENTS[k].strength > 0)) key = "Сердечный приступ";
-            else if (names.includes("МДМА") && (names.includes("Энергетик") || names.some(k => INGREDIENTS[k].strength >
-                0))) key = "Серотониновый шторм";
-            else if (names.includes("Кетамин") && names.includes("Абсент")) key = "Кетаминовая яма";
-            else if (names.includes("Нашатырь") && total > 10) key = "Желудочный ожог";
-            else if (names.includes("Сухой лед") && names.some(k => INGREDIENTS[k].strength > 0)) key = "Ледяной шок";
-            else if (names.includes("ЛСД") || names.includes("Псилоцибиновые грибы")) key = "Галлюцинации";
+            if (names.includes("Кетамин") && names.includes("Абсент")) key = "Кетаминовая яма";
+            else if (names.includes("МДМА") && names.includes("Энергетик")) key = "Серотониновый шторм";
             else if (illegal.length >= 2 && strength > 20) key = "Летальный исход";
             else if (strength > 50) key = "Провал в памяти";
             else if (strength > 35 && names.some(k => k.includes("сироп") || k.includes("Кола"))) key = "Головокружение";
-            else if (names.includes("Табаско") && names.includes("Сок Лайма")) key = "Тошнота";
             else if (strength < 12 && illegal.length === 0) key = "Божественно";
-            else if (Object.keys(mix).length >= 7 && strength > 30) key = "Летальный исход";
+            else if (illegal.length) key = "Головокружение";
+            else if (strength > 30) key = "Головокружение";
 
             const r = REACTIONS[key];
-            let html =
-                `${r.emoji} <span class="${r.class}"><strong>${key}</strong></span>\n\n📖 ${r.desc}\n\n🧪 <strong>разбор:</strong>\n`;
+            let html = `${r.emoji} <span class="${r.class}"><strong>${key}</strong></span>\n\n📖 ${r.desc}`;
             if (illegal.length) {
-                html += `🔞 нелегальные: ${illegal.join(', ')}\n`;
-                if (illegal.includes("Кокаин")) html +=
-                    `  • кокаин + алкоголь → кокаэтилен, кардиотоксичность\n`;
-                if (illegal.includes("МДМА")) html += `  • МДМА + алкоголь → риск гипертермии\n`;
-                if (illegal.includes("Кетамин")) html += `  • кетамин + абсент → угнетение дыхания\n`;
+                html += `\n\n🔞 Содержит нелегальные: ${illegal.join(', ')}`;
             }
-            if (names.includes("Корвалол")) html += `  • корвалол (фенобарбитал) + алкоголь → кома\n`;
-            if (names.includes("Валерьянка")) html += `  • валерьянка усиливает седативный эффект\n`;
-            if (names.includes("Нашатырь")) html += `  • нашатырь — химический ожог пищевода\n`;
-            if (strength > 40) html += `  • высокая крепость (${strength}°) → интоксикация\n`;
-            if (key === "Летальный исход") html += `\n⚠️ <span class="danger">ЭТОТ РЕЦЕПТ ОПАСЕН ДЛЯ ЖИЗНИ</span>`;
-            document.getElementById('result').innerHTML = html;
-        };
+            if (strength > 0) {
+                html += `\n🍸 Крепость: ${strength}°`;
+            }
+            resultDiv.innerHTML = html;
+            // После выпивания — сброс через 3 секунды
+            setTimeout(() => {
+                resetState();
+            }, 4000);
+        }
 
-        // === ОЧИСТКА ===
-        document.getElementById('clearBtn').onclick = () => {
-            Object.keys(values).forEach(k => values[k] = 0);
-            document.querySelectorAll('.ingredient-card input[type="range"]').forEach(slider => {
-                const name = slider.dataset.name;
-                slider.value = 0;
-                document.getElementById(`val_${name}`).textContent = '0';
+        // === НАЗАД ===
+        function goBack() {
+            resetState();
+        }
+
+        // === ПРИВЯЗКА СОБЫТИЙ ===
+        ingredientBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const name = btn.dataset.ingredient;
+                if (name) pourIngredient(name);
             });
-            updateGlass();
-            document.getElementById('result').innerHTML = 'бокал пуст';
-        };
+        });
+
+        mixBtn.addEventListener('click', startMix);
+        drinkBtn.addEventListener('click', drink);
+        backBtn.addEventListener('click', goBack);
 
         // === СТАРТ ===
-        updateGlass();
-        Telegram.WebApp.ready();
+        resetState();
+
+        // Сообщаем Telegram, что приложение готово
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.ready();
+        }
     </script>
 </body>
 </html>
