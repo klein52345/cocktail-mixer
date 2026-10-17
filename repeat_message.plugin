@@ -11,7 +11,7 @@ __id__ = "repeat_message"
 __name__ = "Повтор сообщения"
 __description__ = "Повторяет текст в выбранном чате с заданным интервалом и количеством отправок."
 __author__ = "ChatGPT"
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 __icon__ = "exteraPlugins/1"
 
 
@@ -89,8 +89,9 @@ class RepeatMessagePlugin(BasePlugin):
 
     def _show_interval_picker(self, view=None):
         try:
-            from android.view import Gravity
+            from android.view import Gravity, ContextThemeWrapper
             from android.widget import LinearLayout, NumberPicker, TextView
+            from android.graphics import Color
             from org.telegram.messenger import AndroidUtilities
             from ui.alert import AlertDialogBuilder
             from client_utils import get_last_fragment
@@ -101,22 +102,36 @@ class RepeatMessagePlugin(BasePlugin):
                 self.log("Не удалось открыть выбор интервала: нет активного окна")
                 return
 
+            # Force Android's light dialog theme even when AyuGram itself uses dark mode.
+            resources = activity.getResources()
+            theme_id = resources.getIdentifier(
+                "Theme_Material_Light_Dialog_Alert", "style", "android"
+            )
+            if not theme_id:
+                theme_id = resources.getIdentifier(
+                    "Theme_Material_Light_Dialog", "style", "android"
+                )
+            light_context = ContextThemeWrapper(activity, theme_id) if theme_id else activity
+
             total_minutes = max(1, self._get_interval_seconds() // 60)
             hours, minutes = divmod(total_minutes, 60)
 
-            root = LinearLayout(activity)
+            root = LinearLayout(light_context)
             root.setOrientation(LinearLayout.HORIZONTAL)
             root.setGravity(Gravity.CENTER)
+            root.setBackgroundColor(Color.WHITE)
             padding = AndroidUtilities.dp(12)
             root.setPadding(padding, padding, padding, padding)
 
             def make_column(label_text, minimum, maximum, value, wrap):
-                column = LinearLayout(activity)
+                column = LinearLayout(light_context)
                 column.setOrientation(LinearLayout.VERTICAL)
                 column.setGravity(Gravity.CENTER)
+                column.setBackgroundColor(Color.WHITE)
 
-                label = TextView(activity)
+                label = TextView(light_context)
                 label.setText(label_text)
+                label.setTextColor(Color.BLACK)
                 label.setGravity(Gravity.CENTER)
                 label.setTextSize(14)
                 column.addView(
@@ -127,11 +142,26 @@ class RepeatMessagePlugin(BasePlugin):
                     ),
                 )
 
-                picker = NumberPicker(activity)
+                picker = NumberPicker(light_context)
                 picker.setMinValue(minimum)
                 picker.setMaxValue(maximum)
                 picker.setValue(max(minimum, min(maximum, value)))
                 picker.setWrapSelectorWheel(wrap)
+                picker.setBackgroundColor(Color.WHITE)
+                # Explicitly style the wheel's internal number labels for contrast.
+                try:
+                    picker.setDescendantFocusability( NumberPicker.FOCUS_BLOCK_DESCENDANTS )
+                    fields = picker.getClass().getDeclaredFields()
+                    for field in fields:
+                        if field.getType().getName() == "android.widget.EditText":
+                            field.setAccessible(True)
+                            edit = field.get(picker)
+                            if edit is not None:
+                                edit.setTextColor(Color.BLACK)
+                                edit.setBackgroundColor(Color.WHITE)
+                except Exception:
+                    pass
+
                 column.addView(
                     picker,
                     LinearLayout.LayoutParams(
@@ -151,7 +181,7 @@ class RepeatMessagePlugin(BasePlugin):
             hours_picker = make_column("Часы", 0, 999, hours, False)
             minutes_picker = make_column("Минуты", 0, 59, minutes, True)
 
-            builder = AlertDialogBuilder(activity)
+            builder = AlertDialogBuilder(light_context)
             builder.set_title("Интервал отправки")
             builder.set_view(root)
 
@@ -175,7 +205,10 @@ class RepeatMessagePlugin(BasePlugin):
                 )
 
             builder.set_positive_button("Сохранить", save_interval)
-            builder.set_negative_button("Отмена", lambda dialog_builder, which: dialog_builder.dismiss())
+            builder.set_negative_button(
+                "Отмена",
+                lambda dialog_builder, which: dialog_builder.dismiss()
+            )
             builder.show()
 
         except Exception as exc:
