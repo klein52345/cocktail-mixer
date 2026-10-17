@@ -1,5 +1,5 @@
 # AyuGram / exteraGram plugin: repeating a message in the selected chat
-# Compatible target: older plugin SDKs around 1.4.3.3; API behavior should be tested on-device.
+# Target: older plugin SDKs around 1.4.3.3; test on-device before relying on it.
 
 import threading
 from typing import Any, List
@@ -11,7 +11,7 @@ __id__ = "repeat_message"
 __name__ = "Повтор сообщения"
 __description__ = "Повторяет текст в выбранном чате с заданным интервалом и количеством отправок."
 __author__ = "ChatGPT"
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __icon__ = "exteraPlugins/1"
 
 
@@ -24,6 +24,7 @@ class RepeatMessagePlugin(BasePlugin):
         self._state_lock = threading.Lock()
         self._active_dialog_id = None
         self._sent_count = 0
+        self.log("Плагин «Повтор сообщения» загружен")
 
         self.add_menu_item(
             MenuItemData(
@@ -34,21 +35,36 @@ class RepeatMessagePlugin(BasePlugin):
                 priority=5,
             )
         )
-        self.log("Плагин «Повтор сообщения» загружен")
 
     def on_plugin_unload(self):
         self._stop_event.set()
 
+    def _get_interval_seconds(self):
+        try:
+            seconds = int(self.get_setting("interval_seconds", 60))
+        except (TypeError, ValueError):
+            seconds = self.MIN_INTERVAL_SECONDS
+        return max(self.MIN_INTERVAL_SECONDS, seconds)
+
+    @staticmethod
+    def _format_interval(seconds):
+        total_minutes = max(1, int(seconds) // 60)
+        hours, minutes = divmod(total_minutes, 60)
+        return f"{hours} ч {minutes} мин"
+
     def create_settings(self) -> List[Any]:
+        interval = self._get_interval_seconds()
         return [
             Header(text="Повтор сообщения"),
             Text(
-                text=(
-                    "Чтобы выбрать чат, открой его и нажми "
-                    "«Запустить / остановить повтор» в меню чата. "
-                    "Количество: положительное число отправок; 0 — без ограничения. "
-                    "Остановка — повторное нажатие в меню чата."
-                )
+                text="Интервал отправки",
+                subtext=(
+                    "Сейчас: "
+                    + self._format_interval(interval)
+                    + ". Нажми, чтобы выбрать часы и минуты на двух колёсах."
+                ),
+                on_click=self._show_interval_picker,
+                icon="msg_time",
             ),
             Input(
                 key="message_text",
@@ -57,18 +73,113 @@ class RepeatMessagePlugin(BasePlugin):
                 subtext="Один и тот же текст отправляется повторно.",
             ),
             Input(
-                key="interval_seconds",
-                text="Интервал в секундах",
-                default="60",
-                subtext="Минимум 60 секунд.",
-            ),
-            Input(
                 key="message_count",
                 text="Количество отправок",
                 default="10",
-                subtext="Укажи число; 0 — без ограничения до ручной остановки.",
+                subtext="Укажи число. 0 — без ограничения до ручной остановки.",
+            ),
+            Text(
+                text="Как запустить",
+                subtext=(
+                    "Открой нужный чат и нажми «Запустить / остановить повтор» "
+                    "в меню чата. Повторное нажатие останавливает отправку."
+                ),
             ),
         ]
+
+    def _show_interval_picker(self, view=None):
+        try:
+            from android.view import Gravity
+            from android.widget import LinearLayout, NumberPicker, TextView
+            from org.telegram.messenger import AndroidUtilities
+            from ui.alert import AlertDialogBuilder
+            from client_utils import get_last_fragment
+
+            fragment = get_last_fragment()
+            activity = fragment.getParentActivity() if fragment else None
+            if activity is None:
+                self.log("Не удалось открыть выбор интервала: нет активного окна")
+                return
+
+            total_minutes = max(1, self._get_interval_seconds() // 60)
+            hours, minutes = divmod(total_minutes, 60)
+
+            root = LinearLayout(activity)
+            root.setOrientation(LinearLayout.HORIZONTAL)
+            root.setGravity(Gravity.CENTER)
+            padding = AndroidUtilities.dp(12)
+            root.setPadding(padding, padding, padding, padding)
+
+            def make_column(label_text, minimum, maximum, value, wrap):
+                column = LinearLayout(activity)
+                column.setOrientation(LinearLayout.VERTICAL)
+                column.setGravity(Gravity.CENTER)
+
+                label = TextView(activity)
+                label.setText(label_text)
+                label.setGravity(Gravity.CENTER)
+                label.setTextSize(14)
+                column.addView(
+                    label,
+                    LinearLayout.LayoutParams(
+                        AndroidUtilities.dp(110),
+                        AndroidUtilities.dp(32),
+                    ),
+                )
+
+                picker = NumberPicker(activity)
+                picker.setMinValue(minimum)
+                picker.setMaxValue(maximum)
+                picker.setValue(max(minimum, min(maximum, value)))
+                picker.setWrapSelectorWheel(wrap)
+                column.addView(
+                    picker,
+                    LinearLayout.LayoutParams(
+                        AndroidUtilities.dp(110),
+                        AndroidUtilities.dp(150),
+                    ),
+                )
+                root.addView(
+                    column,
+                    LinearLayout.LayoutParams(
+                        AndroidUtilities.dp(115),
+                        AndroidUtilities.dp(190),
+                    ),
+                )
+                return picker
+
+            hours_picker = make_column("Часы", 0, 999, hours, False)
+            minutes_picker = make_column("Минуты", 0, 59, minutes, True)
+
+            builder = AlertDialogBuilder(activity)
+            builder.set_title("Интервал отправки")
+            builder.set_view(root)
+
+            def save_interval(dialog_builder, which):
+                selected_hours = int(hours_picker.getValue())
+                selected_minutes = int(minutes_picker.getValue())
+                total = selected_hours * 60 + selected_minutes
+
+                # Zero interval is not allowed: the minimum is one minute.
+                if total < 1:
+                    selected_hours, selected_minutes, total = 0, 1, 1
+
+                dialog_builder.dismiss()
+                self.set_setting("interval_seconds", total * 60, reload_settings=True)
+                self.log(
+                    "Интервал установлен: "
+                    + str(selected_hours)
+                    + " ч "
+                    + str(selected_minutes)
+                    + " мин"
+                )
+
+            builder.set_positive_button("Сохранить", save_interval)
+            builder.set_negative_button("Отмена", lambda dialog_builder, which: dialog_builder.dismiss())
+            builder.show()
+
+        except Exception as exc:
+            self.log("Не удалось открыть колёсный выбор интервала: " + str(exc))
 
     def _on_chat_menu_click(self, context):
         dialog_id = context.get("dialog_id")
@@ -98,12 +209,6 @@ class RepeatMessagePlugin(BasePlugin):
             return
 
         try:
-            interval = int(str(self.get_setting("interval_seconds", "60")).strip())
-        except (TypeError, ValueError):
-            interval = self.MIN_INTERVAL_SECONDS
-        interval = max(self.MIN_INTERVAL_SECONDS, interval)
-
-        try:
             message_count = int(str(self.get_setting("message_count", "10")).strip())
         except (TypeError, ValueError):
             self.log("Количество отправок должно быть целым числом; 0 означает без ограничения")
@@ -113,6 +218,7 @@ class RepeatMessagePlugin(BasePlugin):
             self.log("Количество отправок не может быть отрицательным")
             return
 
+        interval = self._get_interval_seconds()
         self._stop_event = threading.Event()
         self._active_dialog_id = int(dialog_id)
         self._sent_count = 0
@@ -130,8 +236,8 @@ class RepeatMessagePlugin(BasePlugin):
             "Повтор запущен для чата "
             + str(self._active_dialog_id)
             + "; интервал "
-            + str(interval)
-            + " сек.; отправок: "
+            + self._format_interval(interval)
+            + "; отправок: "
             + count_label
         )
 
