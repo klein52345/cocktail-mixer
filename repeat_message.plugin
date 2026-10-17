@@ -1,8 +1,7 @@
-# AyuGram / exteraGram plugin: repeating message in a chosen chat
+# AyuGram / exteraGram plugin: repeating a message in the selected chat
 # Compatible target: older plugin SDKs around 1.4.3.3; API behavior should be tested on-device.
 
 import threading
-import time
 from typing import Any, List
 
 from base_plugin import BasePlugin, MenuItemData, MenuItemType
@@ -10,22 +9,20 @@ from ui.settings import Header, Input, Text
 
 __id__ = "repeat_message"
 __name__ = "Повтор сообщения"
-__description__ = "Отправляет заданный текст в выбранный чат с заданным интервалом."
+__description__ = "Повторяет текст в выбранном чате с заданным интервалом и количеством отправок."
 __author__ = "ChatGPT"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __icon__ = "exteraPlugins/1"
 
 
 class RepeatMessagePlugin(BasePlugin):
     MIN_INTERVAL_SECONDS = 60
-    MAX_MESSAGES_PER_RUN = 100
 
     def on_plugin_load(self):
         self._stop_event = threading.Event()
         self._worker = None
         self._state_lock = threading.Lock()
         self._active_dialog_id = None
-        self._active_account = None
         self._sent_count = 0
 
         self.add_menu_item(
@@ -40,26 +37,36 @@ class RepeatMessagePlugin(BasePlugin):
         self.log("Плагин «Повтор сообщения» загружен")
 
     def on_plugin_unload(self):
-        try:
-            self._stop_event.set()
-        except Exception:
-            pass
+        self._stop_event.set()
 
     def create_settings(self) -> List[Any]:
         return [
             Header(text="Повтор сообщения"),
-            Text(text="Открой настройки плагина, задай текст и интервал в секундах. Затем открой нужный чат и нажми «Запустить / остановить повтор» в меню чата."),
+            Text(
+                text=(
+                    "Чтобы выбрать чат, открой его и нажми "
+                    "«Запустить / остановить повтор» в меню чата. "
+                    "Количество: положительное число отправок; 0 — без ограничения. "
+                    "Остановка — повторное нажатие в меню чата."
+                )
+            ),
             Input(
                 key="message_text",
                 text="Текст сообщения",
                 default="Привет!",
-                subtext="Сообщение будет отправляться без изменений.",
+                subtext="Один и тот же текст отправляется повторно.",
             ),
             Input(
                 key="interval_seconds",
                 text="Интервал в секундах",
                 default="60",
-                subtext="Минимум 60 секунд. За один запуск — не более 100 отправок.",
+                subtext="Минимум 60 секунд.",
+            ),
+            Input(
+                key="message_count",
+                text="Количество отправок",
+                default="10",
+                subtext="Укажи число; 0 — без ограничения до ручной остановки.",
             ),
         ]
 
@@ -80,11 +87,10 @@ class RepeatMessagePlugin(BasePlugin):
 
         with self._state_lock:
             running = self._worker is not None and self._worker.is_alive()
-
-        if running:
-            self._stop_event.set()
-            self.log("Повтор остановлен")
-            return
+            if running:
+                self._stop_event.set()
+                self.log("Запрошена остановка повтора")
+                return
 
         message = str(self.get_setting("message_text", "Привет!") or "").strip()
         if not message:
@@ -93,38 +99,45 @@ class RepeatMessagePlugin(BasePlugin):
 
         try:
             interval = int(str(self.get_setting("interval_seconds", "60")).strip())
-        except Exception:
+        except (TypeError, ValueError):
             interval = self.MIN_INTERVAL_SECONDS
         interval = max(self.MIN_INTERVAL_SECONDS, interval)
 
+        try:
+            message_count = int(str(self.get_setting("message_count", "10")).strip())
+        except (TypeError, ValueError):
+            self.log("Количество отправок должно быть целым числом; 0 означает без ограничения")
+            return
+
+        if message_count < 0:
+            self.log("Количество отправок не может быть отрицательным")
+            return
+
         self._stop_event = threading.Event()
         self._active_dialog_id = int(dialog_id)
-        self._active_account = context.get("account")
         self._sent_count = 0
 
         self._worker = threading.Thread(
             target=self._send_loop,
-            args=(self._active_dialog_id, message, interval),
+            args=(self._active_dialog_id, message, interval, message_count),
             name="AyuRepeatMessage",
             daemon=True,
         )
         self._worker.start()
+
+        count_label = "без ограничения" if message_count == 0 else str(message_count)
         self.log(
             "Повтор запущен для чата "
             + str(self._active_dialog_id)
             + "; интервал "
             + str(interval)
-            + " сек."
+            + " сек.; отправок: "
+            + count_label
         )
 
-    def _send_loop(self, dialog_id, message, interval):
-        # Wait before the first send, so tapping the menu does not immediately spam the chat.
+    def _send_loop(self, dialog_id, message, interval, message_count):
+        # Wait before the first send to avoid sending immediately after a menu tap.
         while not self._stop_event.wait(interval):
-            if self._sent_count >= self.MAX_MESSAGES_PER_RUN:
-                self.log("Достигнут лимит в 100 сообщений; повтор остановлен")
-                self._stop_event.set()
-                return
-
             try:
                 from client_utils import send_text
                 send_text(dialog_id, message)
@@ -135,4 +148,9 @@ class RepeatMessagePlugin(BasePlugin):
                 self._stop_event.set()
                 return
 
-        self.log("Цикл повторной отправки завершён")
+            if message_count > 0 and self._sent_count >= message_count:
+                self._stop_event.set()
+                self.log("Все запланированные сообщения отправлены")
+                return
+
+        self.log("Повтор остановлен")
