@@ -1,0 +1,138 @@
+# AyuGram / exteraGram plugin: repeating message in a chosen chat
+# Compatible target: older plugin SDKs around 1.4.3.3; API behavior should be tested on-device.
+
+import threading
+import time
+from typing import Any, List
+
+from base_plugin import BasePlugin, MenuItemData, MenuItemType
+from ui.settings import Header, Input, Text
+
+__id__ = "repeat_message"
+__name__ = "Повтор сообщения"
+__description__ = "Отправляет заданный текст в выбранный чат с заданным интервалом."
+__author__ = "ChatGPT"
+__version__ = "1.0.0"
+__icon__ = "exteraPlugins/1"
+
+
+class RepeatMessagePlugin(BasePlugin):
+    MIN_INTERVAL_SECONDS = 60
+    MAX_MESSAGES_PER_RUN = 100
+
+    def on_plugin_load(self):
+        self._stop_event = threading.Event()
+        self._worker = None
+        self._state_lock = threading.Lock()
+        self._active_dialog_id = None
+        self._active_account = None
+        self._sent_count = 0
+
+        self.add_menu_item(
+            MenuItemData(
+                menu_type=MenuItemType.CHAT_ACTION_MENU,
+                text="Запустить / остановить повтор",
+                on_click=self._on_chat_menu_click,
+                icon="msg_repeat",
+                priority=5,
+            )
+        )
+        self.log("Плагин «Повтор сообщения» загружен")
+
+    def on_plugin_unload(self):
+        try:
+            self._stop_event.set()
+        except Exception:
+            pass
+
+    def create_settings(self) -> List[Any]:
+        return [
+            Header(text="Повтор сообщения"),
+            Text(text="Открой настройки плагина, задай текст и интервал в секундах. Затем открой нужный чат и нажми «Запустить / остановить повтор» в меню чата."),
+            Input(
+                key="message_text",
+                text="Текст сообщения",
+                default="Привет!",
+                subtext="Сообщение будет отправляться без изменений.",
+            ),
+            Input(
+                key="interval_seconds",
+                text="Интервал в секундах",
+                default="60",
+                subtext="Минимум 60 секунд. За один запуск — не более 100 отправок.",
+            ),
+        ]
+
+    def _on_chat_menu_click(self, context):
+        dialog_id = context.get("dialog_id")
+        if dialog_id is None:
+            dialog_id = context.get("chatId")
+        if dialog_id is None:
+            fragment = context.get("fragment")
+            try:
+                dialog_id = fragment.getDialogId() if fragment is not None else None
+            except Exception:
+                dialog_id = None
+
+        if dialog_id is None:
+            self.log("Не удалось определить текущий чат")
+            return
+
+        with self._state_lock:
+            running = self._worker is not None and self._worker.is_alive()
+
+        if running:
+            self._stop_event.set()
+            self.log("Повтор остановлен")
+            return
+
+        message = str(self.get_setting("message_text", "Привет!") or "").strip()
+        if not message:
+            self.log("Сначала укажи непустой текст в настройках плагина")
+            return
+
+        try:
+            interval = int(str(self.get_setting("interval_seconds", "60")).strip())
+        except Exception:
+            interval = self.MIN_INTERVAL_SECONDS
+        interval = max(self.MIN_INTERVAL_SECONDS, interval)
+
+        self._stop_event = threading.Event()
+        self._active_dialog_id = int(dialog_id)
+        self._active_account = context.get("account")
+        self._sent_count = 0
+
+        self._worker = threading.Thread(
+            target=self._send_loop,
+            args=(self._active_dialog_id, message, interval),
+            name="AyuRepeatMessage",
+            daemon=True,
+        )
+        self._worker.start()
+        self.log(
+            "Повтор запущен для чата "
+            + str(self._active_dialog_id)
+            + "; интервал "
+            + str(interval)
+            + " сек."
+        )
+
+    def _send_loop(self, dialog_id, message, interval):
+        # Wait before the first send, so tapping the menu does not immediately spam the chat.
+        while not self._stop_event.wait(interval):
+            if self._sent_count >= self.MAX_MESSAGES_PER_RUN:
+                self.log("Достигнут лимит в 100 сообщений; повтор остановлен")
+                self._stop_event.set()
+                return
+
+            try:
+                from client_utils import send_text
+                send_text(dialog_id, message)
+                self._sent_count += 1
+                self.log("Отправлено сообщений: " + str(self._sent_count))
+            except Exception as exc:
+                self.log("Ошибка отправки; повтор остановлен: " + str(exc))
+                self._stop_event.set()
+                return
+
+        self.log("Цикл повторной отправки завершён")
